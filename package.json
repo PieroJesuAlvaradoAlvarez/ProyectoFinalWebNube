@@ -11,7 +11,9 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "k6:load": "k6 run k6/load-test.js",
+    "k6:stress": "k6 run k6/stress-test.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

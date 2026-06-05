@@ -38,6 +38,7 @@ export default function Home() {
   const [category, setCategory] = useState("WEB");
   const [tech, setTech] = useState("");
   const [projectType, setProjectType] = useState("UNITARY");
+  const [maxDevelopers, setMaxDevelopers] = useState("1");
   const [pubDuration, setPubDuration] = useState("7");
   const [paymentMethod, setPaymentMethod] = useState("BCP");
   const [isPosting, setIsPosting] = useState(false);
@@ -89,7 +90,8 @@ export default function Home() {
 
   const fetchProjects = async () => {
     try {
-      const res = await axios.get("/api/projects");
+      const url = session?.user ? `/api/projects?userId=${(session.user as any).id}` : "/api/projects";
+      const res = await axios.get(url);
       setProjects(res.data);
     } catch (error) {
       toast.error("Error al cargar proyectos");
@@ -118,8 +120,9 @@ export default function Home() {
         category,
         technologies: tech,
         type: projectType,
+        maxDevelopers: projectType === "GROUP" ? maxDevelopers : 1,
         expiresAt: expiresAt.toISOString(),
-        paymentMethod: paymentMethod,
+        paymentMethod,
       });
       toast.success(t("publish_success") || "Proyecto publicado");
       setShowPostModal(false);
@@ -127,6 +130,7 @@ export default function Home() {
       setBudget("");
       setDuration("");
       setTech("");
+      setMaxDevelopers("1");
       fetchProjects();
     } catch (error) {
       toast.error("Error al publicar");
@@ -277,6 +281,19 @@ export default function Home() {
                         <option value="GROUP">{t("group")}</option>
                       </select>
                     </div>
+                    {projectType === "GROUP" && (
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">Número de desarrolladores</label>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          placeholder="2" 
+                          value={maxDevelopers}
+                          onChange={(e) => setMaxDevelopers(e.target.value)}
+                          className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm w-full outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    )}
                     <div className="space-y-1">
                       <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">{t("publication_duration")}</label>
                       <select 
@@ -325,13 +342,17 @@ export default function Home() {
                 technologies={project.technologies}
                 paymentMethod={project.paymentMethod}
                 replies={0}
-                reposts={0}
-                likes={0}
+                reposts={project._count?.reposts || 0}
+                likes={project._count?.likes || 0}
+                applications={project._count?.applications || 0}
                 views="0"
+                isLiked={project.isLiked}
+                isReposted={project.isReposted}
                 canApply={(session?.user as any)?.role === "DEVELOPER"}
                 userId={(session?.user as any)?.id}
                 t={t}
                 onClick={() => router.push(`/projects/${project.id}`)}
+                onUpdate={fetchProjects}
               />
             ))}
             {projects.length === 0 && (
@@ -348,7 +369,7 @@ export default function Home() {
   );
 }
 
-function ProjectPost({ id, author, handle, content, budget, duration, type, category, technologies, paymentMethod, replies, reposts, likes, views, isProject = true, canApply, userId, t, onClick }: any) {
+function ProjectPost({ id, author, handle, content, budget, duration, type, category, technologies, paymentMethod, replies, reposts, likes, applications, views, isLiked, isReposted, isProject = true, canApply, userId, t, onClick, onUpdate }: any) {
   const [isApplying, setIsApplying] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyReason, setApplyReason] = useState("");
@@ -372,10 +393,33 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
       toast.success("¡Postulación enviada!");
       setShowApplyModal(false);
       setApplyReason("");
+      onUpdate();
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Error al postular");
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userId) return;
+    try {
+      await axios.post(`/api/projects/${id}/like`);
+      onUpdate();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleRepost = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!userId) return;
+    try {
+      await axios.post(`/api/projects/${id}/repost`);
+      onUpdate();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -397,7 +441,7 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
             <div className="mt-3 p-3 border border-zinc-700 rounded-2xl bg-zinc-900/50 flex flex-wrap gap-4">
               <div>
                 <p className="text-[10px] text-zinc-500 uppercase font-bold">{t("budget")}</p>
-                <p className="font-bold text-green-500 text-sm">{budget}</p>
+                <p className="font-bold text-sm text-green-500">{budget}</p>
               </div>
               <div>
                 <p className="text-[10px] text-zinc-500 uppercase font-bold">{t("duration")}</p>
@@ -417,6 +461,10 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
                 <p className="text-[10px] text-zinc-500 uppercase font-bold">{t("project_type")}</p>
                 <p className="font-bold text-sm">{type === 'UNITARY' ? t("unitary") : t("group")}</p>
               </div>
+              <div>
+                <p className="text-[10px] text-zinc-500 uppercase font-bold">Postulados</p>
+                <p className="font-bold text-sm">{applications}</p>
+              </div>
             </div>
           )}
 
@@ -425,12 +473,22 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
               <div className="p-2 group-hover:bg-blue-500/10 rounded-full"><MessageCircle size={18} /></div>
               <span className="text-xs">{replies}</span>
             </div>
-            <div className="flex items-center gap-1 hover:text-green-500 transition-colors group">
-              <div className="p-2 group-hover:bg-green-500/10 rounded-full"><Repeat2 size={18} /></div>
+            <div 
+              onClick={handleRepost}
+              className={`flex items-center gap-1 transition-colors group cursor-pointer ${isReposted ? 'text-green-500' : 'hover:text-green-500'}`}
+            >
+              <div className={`p-2 rounded-full ${isReposted ? 'bg-green-500/10' : 'group-hover:bg-green-500/10'}`}>
+                <Repeat2 size={18} />
+              </div>
               <span className="text-xs">{reposts}</span>
             </div>
-            <div className="flex items-center gap-1 hover:text-pink-500 transition-colors group">
-              <div className="p-2 group-hover:bg-pink-500/10 rounded-full"><Heart size={18} /></div>
+            <div 
+              onClick={handleLike}
+              className={`flex items-center gap-1 transition-colors group cursor-pointer ${isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}
+            >
+              <div className={`p-2 rounded-full ${isLiked ? 'bg-pink-500/10' : 'group-hover:bg-pink-500/10'}`}>
+                <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
+              </div>
               <span className="text-xs">{likes}</span>
             </div>
             <div className="flex items-center gap-1 hover:text-blue-500 transition-colors group">

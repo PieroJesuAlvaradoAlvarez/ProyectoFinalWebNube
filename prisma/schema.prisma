@@ -59,6 +59,12 @@ model User {
   projects      Project[] @relation("ClientProjects")
   applications  Application[]
   developedProjects Project[] @relation("DeveloperProjects")
+  selectedForProjects SelectedDeveloper[]
+  likes         Like[]
+  reposts       Repost[]
+  chatsAsClient Chat[] @relation("ChatClient")
+  chatsAsDeveloper Chat[] @relation("ChatDeveloper")
+  messagesSent Message[]
   
   reviewsReceived Review[] @relation("Reviewee")
   reviewsGiven    Review[] @relation("Reviewer")
@@ -101,30 +107,95 @@ enum ProjectType {
   GROUP
 }
 
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
 model Project {
-  id            String        @id @default(cuid())
-  title         String
-  description   String
-  budget        Float
-  duration      String        // How long the development will take (e.g., "2 weeks")
-  category      String?       // Games, Web, Mobile, etc.
-  technologies  String?       // Unity, React, Django, etc.
-  type          ProjectType   @default(UNITARY)
-  status        ProjectStatus @default(OPEN)
-  cancelReason  String?
-  paymentMethod String?       // BCP, Visa, PayPal, etc.
+  id               String              @id @default(cuid())
+  title            String
+  description      String
+  budget           Float
+  duration         String              // How long the development will take (e.g., "2 weeks")
+  category         String?             // Games, Web, Mobile, etc.
+  technologies     String?             // Unity, React, Django, etc.
+  type             ProjectType         @default(UNITARY)
+  maxDevelopers    Int                 @default(1) // For group projects
+  status           ProjectStatus       @default(OPEN)
+  cancelReason     String?
+  paymentMethod    String?             // BCP, Visa, PayPal, etc.
+  paymentStatus    PaymentStatus       @default(PENDING)
   
-  clientId      String
-  client        User          @relation("ClientProjects", fields: [clientId], references: [id])
+  clientId         String
+  client           User                @relation("ClientProjects", fields: [clientId], references: [id])
   
-  developerId   String?
-  developer     User?         @relation("DeveloperProjects", fields: [developerId], references: [id])
+  developerId      String?
+  developer        User?               @relation("DeveloperProjects", fields: [developerId], references: [id])
+  selectedDevelopers SelectedDeveloper[] // For group projects
   
-  applications  Application[]
-  reviews       Review[]
+  applications     Application[]
+  reviews          Review[]
+  likes            Like[]
+  reposts          Repost[]
+  chats            Chat[]
 
   createdAt DateTime @default(now())
   expiresAt DateTime? // How long the post will be visible
+}
+
+model SelectedDeveloper {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  developerId String
+  developer User     @relation(fields: [developerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([projectId, userId])
+}
+
+model Repost {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([projectId, userId])
+}
+
+model Chat {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId  String
+  client    User        @relation("ChatClient", fields: [clientId], references: [id], onDelete: Cascade)
+  developerId String
+  developer   User      @relation("ChatDeveloper", fields: [developerId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  createdAt DateTime @default(now())
+  @@unique([projectId, clientId, developerId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  chatId    String
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  content   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 enum ApplicationStatus {

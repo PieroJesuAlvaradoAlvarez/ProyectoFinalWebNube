@@ -5,16 +5,17 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 export async function POST(
   req: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await context.params;
     const session = await getServerSession(authOptions);
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userId = (session.user as any).id;
-    const projectId = params.id;
+    const projectId = id;
 
     // Check if already reposted
     const existingRepost = await prisma.repost.findUnique({

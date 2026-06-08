@@ -1,8 +1,13 @@
 
 import { PrismaClient, UserRole, ProjectStatus, ProjectType, ApplicationStatus } from '@prisma/client';
-import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
+
+// Variables configurables via entorno (o valores por defecto)
+const NUM_CLIENTS = parseInt(process.env.NUM_CLIENTS || '250');
+const NUM_DEVELOPERS = parseInt(process.env.NUM_DEVELOPERS || '250');
+const NUM_PROJECTS = parseInt(process.env.NUM_PROJECTS || '100');
+const MAX_APPLICATIONS_PER_PROJECT = parseInt(process.env.MAX_APPLICATIONS_PER_PROJECT || '10');
 
 const CATEGORIES = ['Web', 'Mobile', 'Games', 'Desktop', 'API', 'E-commerce'];
 const TECHNOLOGIES = ['React', 'Next.js', 'Vue', 'Angular', 'Node.js', 'Python', 'Django', 'Unity', 'Flutter', 'React Native', 'Java', 'C#'];
@@ -20,14 +25,15 @@ function randomInt(min: number, max: number): number {
 async function main() {
   console.log('🌱 Empezando a generar datos de prueba...');
 
-  // 1. Generar 250 clientes y 250 desarrolladores (total 500 usuarios)
+  // 1. Generar clientes y desarrolladores
   const users: any[] = [];
   
-  for (let i = 0; i &lt; 250; i++) {
+  console.log(`👤 Generando ${NUM_CLIENTS} clientes...`);
+  for (let i = 0; i < NUM_CLIENTS; i++) {
     const firstName = randomChoice(NAMES);
     const lastName = randomChoice(LAST_NAMES);
     const name = `${firstName} ${lastName}`;
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@example.com`;
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Date.now()}${i}@example.com`;
     
     users.push({
       name,
@@ -38,11 +44,12 @@ async function main() {
     });
   }
   
-  for (let i = 0; i &lt; 250; i++) {
+  console.log(`👤 Generando ${NUM_DEVELOPERS} desarrolladores...`);
+  for (let i = 0; i < NUM_DEVELOPERS; i++) {
     const firstName = randomChoice(NAMES);
     const lastName = randomChoice(LAST_NAMES);
     const name = `${firstName} ${lastName}`;
-    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${i}@dev.com`;
+    const email = `${firstName.toLowerCase()}.${lastName.toLowerCase()}${Date.now()}${i}@dev.com`;
     
     users.push({
       name,
@@ -53,20 +60,27 @@ async function main() {
     });
   }
 
-  console.log(`👤 Creando ${users.length} usuarios...`);
-  const createdUsers = await Promise.all(
-    users.map(user =&gt; prisma.user.create({ data: user }))
-  );
+  console.log(`📦 Insertando ${users.length} usuarios en BD...`);
+  // Insertar en lotes para no saturar la BD
+  const createdUsers: any[] = [];
+  const BATCH_SIZE = 100;
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE);
+    const created = await Promise.all(batch.map(user => prisma.user.create({ data: user })));
+    createdUsers.push(...created);
+    console.log(`  - Progreso: ${createdUsers.length}/${users.length}`);
+  }
   console.log(`✅ ${createdUsers.length} usuarios creados!`);
 
-  // 2. Generar 100 proyectos
-  const clients = createdUsers.filter(u =&gt; u.role === UserRole.CLIENT);
-  const developers = createdUsers.filter(u =&gt; u.role === UserRole.DEVELOPER);
+  // 2. Generar proyectos
+  const clients = createdUsers.filter(u => u.role === UserRole.CLIENT);
+  const developers = createdUsers.filter(u => u.role === UserRole.DEVELOPER);
   const projects: any[] = [];
 
-  for (let i = 0; i &lt; 100; i++) {
+  console.log(`📋 Generando ${NUM_PROJECTS} proyectos...`);
+  for (let i = 0; i < NUM_PROJECTS; i++) {
     const client = randomChoice(clients);
-    const status = i &lt; 70 ? ProjectStatus.OPEN : randomChoice([ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED, ProjectStatus.CANCELLED]);
+    const status = i < Math.floor(NUM_PROJECTS * 0.7) ? ProjectStatus.OPEN : randomChoice([ProjectStatus.IN_PROGRESS, ProjectStatus.COMPLETED, ProjectStatus.CANCELLED]);
     
     projects.push({
       title: `Proyecto ${randomChoice(CATEGORIES)} #${i + 1}`,
@@ -79,26 +93,32 @@ async function main() {
       status,
       clientId: client.id,
       developerId: status !== ProjectStatus.OPEN ? randomChoice(developers).id : null,
+      maxDevelopers: randomInt(1, 5),
       paymentMethod: randomChoice(['BCP', 'Visa', 'PayPal', 'Yape', 'Plin']),
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
   }
 
-  console.log(`📋 Creando ${projects.length} proyectos...`);
-  const createdProjects = await Promise.all(
-    projects.map(project =&gt; prisma.project.create({ data: project }))
-  );
+  console.log(`📦 Insertando ${projects.length} proyectos...`);
+  const createdProjects: any[] = [];
+  for (let i = 0; i < projects.length; i += BATCH_SIZE) {
+    const batch = projects.slice(i, i + BATCH_SIZE);
+    const created = await Promise.all(batch.map(project => prisma.project.create({ data: project })));
+    createdProjects.push(...created);
+    console.log(`  - Progreso: ${createdProjects.length}/${projects.length}`);
+  }
   console.log(`✅ ${createdProjects.length} proyectos creados!`);
 
   // 3. Generar postulaciones a proyectos abiertos
-  const openProjects = createdProjects.filter(p =&gt; p.status === ProjectStatus.OPEN);
+  const openProjects = createdProjects.filter(p => p.status === ProjectStatus.OPEN);
   const applications: any[] = [];
 
+  console.log(`📝 Generando postulaciones...`);
   for (const project of openProjects) {
-    const numApplications = randomInt(1, 10);
-    const selectedDevs = new Set&lt;string&gt;();
+    const numApplications = randomInt(1, MAX_APPLICATIONS_PER_PROJECT);
+    const selectedDevs = new Set<string>();
 
-    for (let i = 0; i &lt; numApplications; i++) {
+    for (let i = 0; i < numApplications; i++) {
       let dev = randomChoice(developers);
       while (selectedDevs.has(dev.id)) {
         dev = randomChoice(developers);
@@ -114,14 +134,18 @@ async function main() {
     }
   }
 
-  console.log(`📝 Creando ${applications.length} postulaciones...`);
-  const createdApplications = await Promise.all(
-    applications.map(app =&gt; prisma.application.create({ data: app }))
-  );
+  console.log(`📦 Insertando ${applications.length} postulaciones...`);
+  const createdApplications: any[] = [];
+  for (let i = 0; i < applications.length; i += BATCH_SIZE) {
+    const batch = applications.slice(i, i + BATCH_SIZE);
+    const created = await Promise.all(batch.map(app => prisma.application.create({ data: app })));
+    createdApplications.push(...created);
+    console.log(`  - Progreso: ${createdApplications.length}/${applications.length}`);
+  }
   console.log(`✅ ${createdApplications.length} postulaciones creadas!`);
 
   // 4. Generar algunas reseñas
-  const completedProjects = createdProjects.filter(p =&gt; p.status === ProjectStatus.COMPLETED &amp;&amp; p.developerId);
+  const completedProjects = createdProjects.filter(p => p.status === ProjectStatus.COMPLETED && p.developerId);
   const reviews: any[] = [];
 
   for (const project of completedProjects) {
@@ -134,26 +158,25 @@ async function main() {
     });
   }
 
-  console.log(`⭐ Creando ${reviews.length} reseñas...`);
-  const createdReviews = await Promise.all(
-    reviews.map(review =&gt; prisma.review.create({ data: review }))
-  );
-  console.log(`✅ ${createdReviews.length} reseñas creadas!`);
+  if (reviews.length > 0) {
+    console.log(`⭐ Generando ${reviews.length} reseñas...`);
+    const createdReviews = await Promise.all(reviews.map(review => prisma.review.create({ data: review })));
+    console.log(`✅ ${createdReviews.length} reseñas creadas!`);
+  }
 
   console.log('\n🎉 Datos de prueba generados exitosamente!');
   console.log(`\n📊 Resumen:`);
-  console.log(`- Usuarios: ${createdUsers.length}`);
+  console.log(`- Usuarios: ${createdUsers.length} (${NUM_CLIENTS} clientes, ${NUM_DEVELOPERS} desarrolladores)`);
   console.log(`- Proyectos: ${createdProjects.length}`);
   console.log(`- Postulaciones: ${createdApplications.length}`);
-  console.log(`- Reseñas: ${createdReviews.length}`);
+  console.log(`- Reseñas: ${reviews.length}`);
 }
 
 main()
-  .catch((e) =&gt; {
+  .catch((e) => {
     console.error('❌ Error:', e);
     process.exit(1);
   })
-  .finally(async () =&gt; {
+  .finally(async () => {
     await prisma.$disconnect();
   });
-

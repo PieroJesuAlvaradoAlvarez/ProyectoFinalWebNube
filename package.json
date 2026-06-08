@@ -11,9 +11,13 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "db:seed": "tsx scripts/seed.ts",
+    "db:seed:10k": "set NUM_CLIENTS=5000&& set NUM_DEVELOPERS=5000&& set NUM_PROJECTS=2000&& tsx scripts/seed.ts",
+    "db:seed:50k": "set NUM_CLIENTS=25000&& set NUM_DEVELOPERS=25000&& set NUM_PROJECTS=10000&& tsx scripts/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "k6:load": "k6 run k6/load-test.js",
-    "k6:stress": "k6 run k6/stress-test.js"
+    "k6:stress": "k6 run k6/stress-test.js",
+    "k6:extreme-10k": "k6 run k6/extreme-stress-10k.js",
+    "k6:extreme-50k-cloud": "k6 cloud k6/extreme-stress-50k-cloud.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

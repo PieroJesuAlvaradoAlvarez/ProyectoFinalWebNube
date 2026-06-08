@@ -16,6 +16,8 @@
     "db:reset": "prisma migrate reset --force",
     "k6:load": "k6 run k6/load-test.js",
     "k6:stress": "k6 run k6/stress-test.js",
+    "k6:stress-1k": "k6 run k6/stress-1k.js",
+    "k6:stress-5k": "k6 run k6/stress-5k.js",
     "k6:extreme-10k": "k6 run k6/extreme-stress-10k.js",
     "k6:extreme-50k-cloud": "k6 cloud k6/extreme-stress-50k-cloud.js"
   },

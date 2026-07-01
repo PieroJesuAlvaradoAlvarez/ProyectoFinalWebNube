@@ -44,32 +44,46 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String            @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?           @unique
   emailVerified DateTime?
   image         String?
-  role          UserRole  @default(CLIENT)
+  role          UserRole          @default(CLIENT)
   bio           String?
   certificates  String?
+  affiliation   String?           // Company, university, etc.
+  age           Int?
+  phone         String?
+  location      String?           // City, country
+  website       String?
   
   accounts      Account[]
   sessions      Session[]
   
-  projects      Project[] @relation("ClientProjects")
+  projects      Project[]         @relation("ClientProjects")
   applications  Application[]
-  developedProjects Project[] @relation("DeveloperProjects")
+  developedProjects Project[]     @relation("DeveloperProjects")
   selectedForProjects SelectedDeveloper[]
   likes         Like[]
   reposts       Repost[]
-  chatsAsClient Chat[] @relation("ChatClient")
-  chatsAsDeveloper Chat[] @relation("ChatDeveloper")
-  messagesSent Message[]
+  chatsAsUser1  Chat[]            @relation("ChatUser1")
+  chatsAsUser2  Chat[]            @relation("ChatUser2")
+  messagesSent  Message[]
   
-  reviewsReceived Review[] @relation("Reviewee")
-  reviewsGiven    Review[] @relation("Reviewer")
+  reviewsReceived Review[]         @relation("Reviewee")
+  reviewsGiven    Review[]         @relation("Reviewer")
 
   notifications   Notification[]
+  
+  sentFriendRequests FriendRequest[] @relation("FriendRequestSender")
+  receivedFriendRequests FriendRequest[] @relation("FriendRequestReceiver")
+  friendshipsAsUser1 Friendship[]       @relation("FriendshipUser1")
+  friendshipsAsUser2 Friendship[]       @relation("FriendshipUser2")
+  
+  reportsGiven Report[]         @relation("ReportReporter")
+  reportsReceived Report[]       @relation("ReportReported")
+  paymentMethods PaymentMethod[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -176,15 +190,15 @@ model Repost {
 
 model Chat {
   id        String      @id @default(cuid())
-  projectId String
-  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  clientId  String
-  client    User        @relation("ChatClient", fields: [clientId], references: [id], onDelete: Cascade)
-  developerId String
-  developer   User      @relation("ChatDeveloper", fields: [developerId], references: [id], onDelete: Cascade)
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user1Id  String
+  user1    User        @relation("ChatUser1", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2Id  String
+  user2    User        @relation("ChatUser2", fields: [user2Id], references: [id], onDelete: Cascade)
   messages  Message[]
   createdAt DateTime @default(now())
-  @@unique([projectId, clientId, developerId])
+  @@unique([projectId, user1Id, user2Id])
 }
 
 model Message {
@@ -217,8 +231,8 @@ model Application {
 
 model Review {
   id            String   @id @default(cuid())
-  projectId     String
-  project       Project  @relation(fields: [projectId], references: [id])
+  projectId     String?
+  project       Project? @relation(fields: [projectId], references: [id])
   
   reviewerId    String
   reviewer      User     @relation("Reviewer", fields: [reviewerId], references: [id])
@@ -229,4 +243,71 @@ model Review {
   stars         Int      // 1 to 5
   comment       String?
   createdAt     DateTime @default(now())
+}
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model FriendRequest {
+  id          String             @id @default(cuid())
+  senderId    String
+  sender      User               @relation("FriendRequestSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User               @relation("FriendRequestReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  @@unique([senderId, receiverId])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId1   String
+  user1     User     @relation("FriendshipUser1", fields: [userId1], references: [id], onDelete: Cascade)
+  userId2   String
+  user2     User     @relation("FriendshipUser2", fields: [userId2], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@unique([userId1, userId2])
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  reporterId  String
+  reporter    User     @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedId  String
+  reported    User     @relation("ReportReported", fields: [reportedId], references: [id], onDelete: Cascade)
+  reason      String
+  description String?
+  resolved    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+}
+
+enum PaymentMethodType {
+  BCP
+  YAPE
+  VISA
+  PAYPAL
+  TRANSFER
+}
+
+model PaymentMethod {
+  id          String            @id @default(cuid())
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        PaymentMethodType
+  
+  // Type-specific fields
+  cardNumber  String?           // Visa/MC
+  cardExpiry  String?           // MM/YY
+  cardCvc     String?           // CVC
+  yapeNumber  String?           // Yape phone number
+  bcpAccount  String?           // BCP account number
+  transferAccount String?       // Transfer account number
+  paypalEmail String?           // PayPal email
+  
+  isDefault   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
 }

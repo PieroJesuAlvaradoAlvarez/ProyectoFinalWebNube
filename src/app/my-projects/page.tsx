@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { useLanguage } from "@/contexts/LanguageContext";
 import toast from "react-hot-toast";
-import { CheckCircle2, XCircle, Clock, Users, Trash2, Star, X } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Users, Trash2, Star, X, CreditCard, DollarSign, Smartphone, Building2 } from "lucide-react";
 
 export default function MyProjects() {
   const { data: session } = useSession();
@@ -22,6 +22,10 @@ export default function MyProjects() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("");
 
   useEffect(() => {
     if (session?.user) {
@@ -41,11 +45,29 @@ export default function MyProjects() {
     }
   };
 
+  const getPaymentMethodInfo = (method: string) => {
+    switch (method) {
+      case "BCP":
+        return { icon: Building2, color: "#e61e2d" };
+      case "Yape":
+        return { icon: Smartphone, color: "#8c2be8" };
+      case "Visa":
+        return { icon: CreditCard, color: "#f77e05" };
+      case "PayPal":
+        return { icon: DollarSign, color: "#003087" };
+      case "Transferencia":
+        return { icon: Building2, color: "#0070ba" };
+      default:
+        return { icon: DollarSign, color: "#ffffff" };
+    }
+  };
+
   const handleFinalize = async (project: any) => {
     try {
       if (project.developerId) {
         setSelectedProject(project);
-        setShowReviewModal(true);
+        setSelectedPaymentMethod(project.paymentMethod || "");
+        setShowPaymentModal(true);
       } else {
         await axios.patch(`/api/projects/${project.id}`, { status: "COMPLETED" });
         toast.success(t("finalize_success") || "Proyecto finalizado");
@@ -56,10 +78,18 @@ export default function MyProjects() {
     }
   };
 
+  const proceedToReview = () => {
+    setShowPaymentModal(false);
+    setShowReviewModal(true);
+  };
+
   const submitReview = async () => {
     try {
-      // 1. Mark project as completed
-      await axios.patch(`/api/projects/${selectedProject.id}`, { status: "COMPLETED" });
+      // 1. Mark project as completed and payment as paid
+      await axios.patch(`/api/projects/${selectedProject.id}`, { 
+        status: "COMPLETED",
+        paymentStatus: "PAID"
+      });
       
       // 2. Submit review
       await axios.post("/api/reviews", {
@@ -70,7 +100,7 @@ export default function MyProjects() {
         comment: reviewComment
       });
 
-      toast.success("Proyecto finalizado y reseña enviada");
+      toast.success("Proyecto finalizado, pago marcado como completado y reseña enviada");
       setShowReviewModal(false);
       setReviewComment("");
       fetchMyProjects();
@@ -143,13 +173,15 @@ export default function MyProjects() {
                         >
                           <Trash2 size={16} /> {t("cancel")}
                         </button>
-                        <button 
-                          onClick={() => handleFinalize(project)}
-                          className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-bold py-2 rounded-xl hover:bg-green-700 transition-colors"
-                        >
-                          <CheckCircle2 size={16} /> {t("finalize")}
-                        </button>
                       </>
+                    )}
+                    {(project.status === 'OPEN' || project.status === 'IN_PROGRESS') && (
+                      <button 
+                        onClick={() => handleFinalize(project)}
+                        className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white text-sm font-bold py-2 rounded-xl hover:bg-green-700 transition-colors"
+                      >
+                        <CheckCircle2 size={16} /> {t("finalize")}
+                      </button>
                     )}
                     {project.status === 'CANCELLED' && (
                       <div className="w-full p-2 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-400">
@@ -186,6 +218,60 @@ export default function MyProjects() {
 
         <RightSidebar />
       </div>
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedProject && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-black border border-zinc-800 w-full max-w-md rounded-2xl p-6 space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold">Pago del Proyecto</h2>
+              <button onClick={() => setShowPaymentModal(false)}><X size={20} /></button>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <p className="text-4xl font-bold text-green-500">S/ {selectedProject.budget}</p>
+              <p className="text-sm text-zinc-500">{selectedProject.title}</p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-bold text-zinc-500">Método de Pago Seleccionado:</p>
+              {(() => {
+                const paymentInfo = getPaymentMethodInfo(selectedProject.paymentMethod || "");
+                const PaymentIcon = paymentInfo.icon;
+                return (
+                  <div className="flex items-center gap-3 p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${paymentInfo.color}20` }}>
+                      <PaymentIcon size={24} color={paymentInfo.color} />
+                    </div>
+                    <div>
+                      <p className="font-bold">{selectedProject.paymentMethod}</p>
+                      <p className="text-xs text-zinc-500">
+                        {selectedProject.paymentMethod === "BCP" && "Pago mediante billetera digital BCP"}
+                        {selectedProject.paymentMethod === "Yape" && "Pago rápido mediante Yape"}
+                        {selectedProject.paymentMethod === "Visa" && "Pago seguro con tarjeta Visa o Mastercard"}
+                        {selectedProject.paymentMethod === "PayPal" && "Pago internacional via PayPal"}
+                        {selectedProject.paymentMethod === "Transferencia" && "Transferencia bancaria directa"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-3 text-xs text-yellow-200 space-y-1">
+              <p className="font-bold">Nota:</p>
+              <p>Esta es una simulación de pago. En una aplicación real, aquí se integraría con un proveedor de pagos real (Mercado Pago, Stripe, etc.).</p>
+            </div>
+
+            <button 
+              onClick={proceedToReview}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-green-600/20"
+            >
+              Confirmar Pago y Continuar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Cancel Modal */}
       {showCancelModal && (

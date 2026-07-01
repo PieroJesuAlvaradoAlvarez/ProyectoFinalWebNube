@@ -12,7 +12,8 @@ import {
   Briefcase,
   History,
   LogOut,
-  Globe
+  Globe,
+  MessageCircle
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -55,6 +56,7 @@ export function Sidebar() {
         {session && (
           <>
             <SidebarItem icon={Bell} label={t("notifications")} href="/notifications" active={pathname === "/notifications"} />
+            <SidebarItem icon={MessageCircle} label="Chats" href="/chats" active={pathname.startsWith("/chats")} />
             
             {role === "CLIENT" ? (
               <SidebarItem icon={Briefcase} label={t("my_projects")} href="/my-projects" active={pathname === "/my-projects"} />
@@ -88,19 +90,19 @@ export function Sidebar() {
       </nav>
 
       {session?.user && (
-        <div className="mt-4 p-3 flex items-center gap-3 hover:bg-zinc-900 rounded-full cursor-pointer transition-colors">
-          {session.user.image ? (
-            <img src={session.user.image} alt={session.user.name || ""} className="w-10 h-10 rounded-full" />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-zinc-700 flex-shrink-0" />
-          )}
-          <div className="hidden xl:block overflow-hidden">
-            <p className="font-bold truncate">{session.user.name}</p>
-            <p className="text-zinc-500 text-sm truncate">@{session.user.email?.split('@')[0]}</p>
-          </div>
-          <MoreHorizontal className="ml-auto hidden xl:block" size={20} />
-        </div>
-      )}
+          <Link href={`/profile/${(session.user as any).id}`} className="mt-4 p-3 flex items-center gap-3 hover:bg-zinc-900 rounded-full cursor-pointer transition-colors">
+            {session.user.image ? (
+              <img src={session.user.image} alt={session.user.name || ""} className="w-10 h-10 rounded-full" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-zinc-700 flex-shrink-0" />
+            )}
+            <div className="hidden xl:block overflow-hidden">
+              <p className="font-bold truncate">{session.user.name}</p>
+              <p className="text-zinc-500 text-sm truncate">@{session.user.email?.split('@')[0]}</p>
+            </div>
+            <MoreHorizontal className="ml-auto hidden xl:block" size={20} />
+          </Link>
+        )}
     </aside>
   );
 }

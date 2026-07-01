@@ -12,7 +12,6 @@ import {
   MessageCircle,
   Repeat2,
   Heart,
-  BarChart3,
   Plus,
   X,
   Send
@@ -68,7 +67,12 @@ export default function Home() {
 
   const handleRoleFromUrl = async () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const roleParam = urlParams.get("role");
+    let roleParam = urlParams.get("role");
+    
+    // If no role in URL, check localStorage
+    if (!roleParam) {
+      roleParam = localStorage.getItem("nextcode_login_role");
+    }
     
     if (roleParam && session?.user && (session.user as any).role !== roleParam) {
       try {
@@ -80,8 +84,9 @@ export default function Home() {
         await update();
 
         toast.success(language === "ES-LA" ? `Entraste como ${roleParam === 'CLIENT' ? 'Solicitante' : 'Desarrollador'}` : `Logged in as ${roleParam}`);
-        // Clean URL
+        // Clean URL and localStorage
         window.history.replaceState({}, document.title, "/");
+        localStorage.removeItem("nextcode_login_role");
       } catch (error) {
         console.error("Error setting role from login");
       }
@@ -341,11 +346,10 @@ export default function Home() {
                 category={project.category}
                 technologies={project.technologies}
                 paymentMethod={project.paymentMethod}
-                replies={0}
+                replies={project._count?.applications || 0}
                 reposts={project._count?.reposts || 0}
                 likes={project._count?.likes || 0}
                 applications={project._count?.applications || 0}
-                views="0"
                 isLiked={project.isLiked}
                 isReposted={project.isReposted}
                 canApply={(session?.user as any)?.role === "DEVELOPER"}
@@ -369,10 +373,14 @@ export default function Home() {
   );
 }
 
-function ProjectPost({ id, author, handle, content, budget, duration, type, category, technologies, paymentMethod, replies, reposts, likes, applications, views, isLiked, isReposted, isProject = true, canApply, userId, t, onClick, onUpdate }: any) {
+function ProjectPost({ id, author, handle, content, budget, duration, type, category, technologies, paymentMethod, replies, reposts: initialReposts, likes: initialLikes, applications, views, isLiked: initialIsLiked, isReposted: initialIsReposted, isProject = true, canApply, userId, t, onClick, onUpdate }: any) {
   const [isApplying, setIsApplying] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [applyReason, setApplyReason] = useState("");
+  const [isLiked, setIsLiked] = useState(initialIsLiked);
+  const [likes, setLikes] = useState(initialLikes);
+  const [isReposted, setIsReposted] = useState(initialIsReposted);
+  const [reposts, setReposts] = useState(initialReposts);
 
   const handleApply = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -404,22 +412,38 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
   const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!userId) return;
+
+    // Optimistic update
+    const newIsLiked = !isLiked;
+    setIsLiked(newIsLiked);
+    setLikes(newIsLiked ? likes + 1 : likes - 1);
+
     try {
       await axios.post(`/api/projects/${id}/like`);
-      onUpdate();
     } catch (error) {
       console.error(error);
+      // Revert if error
+      setIsLiked(isLiked);
+      setLikes(initialLikes);
     }
   };
 
   const handleRepost = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!userId) return;
+
+    // Optimistic update
+    const newIsReposted = !isReposted;
+    setIsReposted(newIsReposted);
+    setReposts(newIsReposted ? reposts + 1 : reposts - 1);
+
     try {
       await axios.post(`/api/projects/${id}/repost`);
-      onUpdate();
     } catch (error) {
       console.error(error);
+      // Revert if error
+      setIsReposted(isReposted);
+      setReposts(initialReposts);
     }
   };
 
@@ -490,10 +514,6 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
                 <Heart size={18} fill={isLiked ? 'currentColor' : 'none'} />
               </div>
               <span className="text-xs">{likes}</span>
-            </div>
-            <div className="flex items-center gap-1 hover:text-blue-500 transition-colors group">
-              <div className="p-2 group-hover:bg-blue-500/10 rounded-full"><BarChart3 size={18} /></div>
-              <span className="text-xs">{views}</span>
             </div>
             {canApply && (
               <button 

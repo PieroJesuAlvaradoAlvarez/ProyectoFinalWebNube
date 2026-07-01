@@ -1,6 +1,27 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+async function getUserWithStats(userId: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      reviewsReceived: true,
+    },
+  });
+
+  if (!user) return null;
+
+  const averageStars = user.reviewsReceived.length > 0
+    ? user.reviewsReceived.reduce((acc, curr) => acc + curr.stars, 0) / user.reviewsReceived.length
+    : 0;
+
+  return {
+    ...user,
+    averageStars: parseFloat(averageStars.toFixed(1)),
+    reviewCount: user.reviewsReceived.length,
+  };
+}
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ id: string }> }
@@ -23,8 +44,23 @@ export async function GET(
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    return NextResponse.json(project);
+    // Enhance applications with developer stats
+    const enhancedApplications = await Promise.all(
+      project.applications.map(async (app) => {
+        const devWithStats = await getUserWithStats(app.developerId);
+        return {
+          ...app,
+          developer: devWithStats,
+        };
+      })
+    );
+
+    return NextResponse.json({
+      ...project,
+      applications: enhancedApplications,
+    });
   } catch (error) {
+    console.error("GET PROJECT ERROR:", error);
     return NextResponse.json({ error: "Error al obtener proyecto" }, { status: 500 });
   }
 }

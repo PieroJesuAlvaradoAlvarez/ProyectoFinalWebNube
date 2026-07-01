@@ -37,9 +37,9 @@ function SignInContent() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      // We pass the role in the callback URL or store it in a cookie/localStorage
-      // For simplicity, we'll use a callbackUrl with the role as a param that we can handle in the callback
-      await signIn("google", { callbackUrl: `/?role=${role}` });
+      // Store selected role in localStorage before starting OAuth flow
+      localStorage.setItem("nextcode_login_role", role);
+      await signIn("google", { callbackUrl: "/" });
     } catch (error) {
       toast.error("Error Google Auth");
       setIsLoading(false);

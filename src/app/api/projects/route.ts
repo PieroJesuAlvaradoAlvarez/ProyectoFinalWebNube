@@ -5,11 +5,33 @@ export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const userId = url.searchParams.get("userId");
+    const search = url.searchParams.get("search");
+    const category = url.searchParams.get("category");
+    const projectType = url.searchParams.get("type");
+
+    // Build where clause
+    const where: any = {
+      status: "OPEN",
+    };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { technologies: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (category) {
+      where.category = category;
+    }
+
+    if (projectType) {
+      where.type = projectType;
+    }
 
     const projects = await prisma.project.findMany({
-      where: {
-        status: "OPEN",
-      },
+      where,
       include: {
         client: {
           select: {

@@ -5,7 +5,7 @@ import { RightSidebar } from "@/components/RightSidebar";
 import { useSession } from "next-auth/react";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { ArrowLeft, Clock, DollarSign, Users, Code, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Clock, DollarSign, Users, Code, CheckCircle2, Star } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -41,9 +41,17 @@ export default function ProjectDetail() {
 
   const handleSelectDeveloper = async (developerId: string, developerName: string) => {
     try {
+      // Update project status and developer
       await axios.patch(`/api/projects/${id}`, {
         status: "IN_PROGRESS",
         developerId: developerId
+      });
+      
+      // Create chat between client and developer
+      await axios.post("/api/chats", {
+        projectId: id,
+        user1Id: (session.user as any).id,
+        user2Id: developerId
       });
       
       // Create notification for developer
@@ -148,6 +156,15 @@ export default function ProjectDetail() {
                             {app.developer.name}
                             {app.developer.role === 'DEVELOPER' && <CheckCircle2 size={14} className="text-blue-500" />}
                           </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {app.developer.reviewCount > 0 ? (
+                              <span className="text-xs text-yellow-500 font-bold flex items-center gap-1">
+                                <Star size={12} fill="currentColor" /> {app.developer.averageStars} ({app.developer.reviewCount} reseñas)
+                              </span>
+                            ) : (
+                              <span className="text-xs text-zinc-500">Sin reseñas aún</span>
+                            )}
+                          </div>
                           <p className="text-xs text-zinc-500">@{app.developer.email.split('@')[0]}</p>
                         </div>
                       </Link>

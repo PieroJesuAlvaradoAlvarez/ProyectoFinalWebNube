@@ -24,6 +24,7 @@ export default function ChatsList() {
   }, [session?.user]);
 
   const fetchChats = async () => {
+    if (!session?.user) return;
     try {
       const res = await axios.get(`/api/chats?userId=${(session.user as any).id}`);
       setChats(res.data);

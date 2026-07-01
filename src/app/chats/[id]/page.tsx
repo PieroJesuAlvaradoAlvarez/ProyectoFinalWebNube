@@ -39,6 +39,7 @@ export default function ChatDetail() {
   };
 
   const fetchChatAndMessages = async () => {
+    if (!session?.user) return;
     try {
       setLoading(true);
       // First get user's chats to find the right one
@@ -65,7 +66,7 @@ export default function ChatDetail() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || sending) return;
+    if (!newMessage.trim() || sending || !session?.user) return;
 
     setSending(true);
     try {

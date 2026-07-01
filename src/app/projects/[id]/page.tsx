@@ -40,6 +40,11 @@ export default function ProjectDetail() {
   };
 
   const handleSelectDeveloper = async (developerId: string, developerName: string) => {
+    if (!session?.user) {
+      toast.error("Debes iniciar sesión primero");
+      return;
+    }
+    
     try {
       // Update project status and developer
       await axios.patch(`/api/projects/${id}`, {

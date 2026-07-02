@@ -270,6 +270,74 @@ export const translations: Translations = {
   other: {
     "ES-LA": "Otro",
     "EN-US": "Other",
+  },
+  publish_error: {
+    "ES-LA": "Completa todos los campos",
+    "EN-US": "Complete all fields",
+  },
+  publish_success: {
+    "ES-LA": "Proyecto publicado",
+    "EN-US": "Project published",
+  },
+  error_loading_projects: {
+    "ES-LA": "Error al cargar proyectos",
+    "EN-US": "Error loading projects",
+  },
+  error_publishing: {
+    "ES-LA": "Error al publicar",
+    "EN-US": "Error publishing",
+  },
+  connected_as: {
+    "ES-LA": "Conectado como",
+    "EN-US": "Connected as",
+  },
+  tech_placeholder: {
+    "ES-LA": "Unity, Java, React...",
+    "EN-US": "Unity, Java, React...",
+  },
+  max_developers_label: {
+    "ES-LA": "Número de desarrolladores",
+    "EN-US": "Number of developers",
+  },
+  max_developers_placeholder: {
+    "ES-LA": "2",
+    "EN-US": "2",
+  },
+  error_apply_reason: {
+    "ES-LA": "Debes poner un motivo para postular",
+    "EN-US": "You must provide a reason to apply",
+  },
+  apply_success: {
+    "ES-LA": "¡Postulación enviada!",
+    "EN-US": "Application sent!",
+  },
+  apply_error: {
+    "ES-LA": "Error al postular",
+    "EN-US": "Error applying",
+  },
+  applicants_count_label: {
+    "ES-LA": "Postulados",
+    "EN-US": "Applicants",
+  },
+  apply_modal_placeholder: {
+    "ES-LA": "Hola, me interesa porque...",
+    "EN-US": "Hi, I'm interested because...",
+  },
+  logged_in_as: {
+    "ES-LA": "Entraste como",
+    "EN-US": "Logged in as",
+  },
+  duration_placeholder: {
+    "ES-LA": "ej. 2 semanas",
+    "EN-US": "e.g. 2 weeks",
+  },
+  visa_mastercard: {
+    "ES-LA": "Visa / Mastercard",
+    "EN-US": "Visa / Mastercard",
+  },
+  bank_transfer: {
+    "ES-LA": "Transferencia Bancaria",
+    "EN-US": "Bank Transfer",
   }
 };
 

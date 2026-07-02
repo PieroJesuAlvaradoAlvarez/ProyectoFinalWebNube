@@ -83,7 +83,7 @@ export default function Home() {
         // Update session immediately
         await update();
 
-        toast.success(language === "ES-LA" ? `Entraste como ${roleParam === 'CLIENT' ? 'Solicitante' : 'Desarrollador'}` : `Logged in as ${roleParam}`);
+        toast.success(`${t("logged_in_as")} ${roleParam === 'CLIENT' ? t("role_client") : t("role_developer")}`);
         // Clean URL and localStorage
         window.history.replaceState({}, document.title, "/");
         localStorage.removeItem("nextcode_login_role");
@@ -99,7 +99,7 @@ export default function Home() {
       const res = await axios.get(url);
       setProjects(res.data);
     } catch (error) {
-      toast.error("Error al cargar proyectos");
+      toast.error(t("error_loading_projects"));
     }
   };
 
@@ -107,7 +107,7 @@ export default function Home() {
     if (!session) return;
 
     if (!content || !budget || !duration) {
-      toast.error(t("publish_error") || "Completa todos los campos");
+      toast.error(t("publish_error"));
       return;
     }
 
@@ -129,7 +129,7 @@ export default function Home() {
         expiresAt: expiresAt.toISOString(),
         paymentMethod,
       });
-      toast.success(t("publish_success") || "Proyecto publicado");
+      toast.success(t("publish_success"));
       setShowPostModal(false);
       setContent("");
       setBudget("");
@@ -138,7 +138,7 @@ export default function Home() {
       setMaxDevelopers("1");
       fetchProjects();
     } catch (error) {
-      toast.error("Error al publicar");
+      toast.error(t("error_publishing"));
     } finally {
       setIsPosting(false);
     }
@@ -161,7 +161,7 @@ export default function Home() {
             </div>
             {session && (
               <div className="px-4 pb-2 text-xs text-green-500 font-bold">
-                Conectado como: {session.user?.email} ({(session.user as any).role === 'CLIENT' ? t("role_client") : t("role_developer")})
+                {t("connected_as")}: {session.user?.email} ({(session.user as any).role === 'CLIENT' ? t("role_client") : t("role_developer")})
               </div>
             )}
             <div className="flex w-full">
@@ -238,7 +238,7 @@ export default function Home() {
                       <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">{t("technologies")}</label>
                       <input 
                         type="text" 
-                        placeholder="Unity, Java, React..." 
+                        placeholder={t("tech_placeholder")} 
                         value={tech}
                         onChange={(e) => setTech(e.target.value)}
                         className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm w-full outline-none focus:border-blue-500"
@@ -269,7 +269,7 @@ export default function Home() {
                       <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">{t("duration")}</label>
                       <input 
                         type="text" 
-                        placeholder="e.g. 2 semanas" 
+                        placeholder={t("duration_placeholder")} 
                         value={duration}
                         onChange={(e) => setDuration(e.target.value)}
                         className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm w-full outline-none focus:border-blue-500"
@@ -288,11 +288,11 @@ export default function Home() {
                     </div>
                     {projectType === "GROUP" && (
                       <div className="space-y-1">
-                        <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">Número de desarrolladores</label>
+                        <label className="text-[10px] uppercase font-bold text-zinc-500 ml-1">{t("max_developers_label")}</label>
                         <input 
                           type="number" 
                           min="1" 
-                          placeholder="2" 
+                          placeholder={t("max_developers_placeholder")} 
                           value={maxDevelopers}
                           onChange={(e) => setMaxDevelopers(e.target.value)}
                           className="bg-zinc-900 border border-zinc-800 rounded-lg p-2 text-sm w-full outline-none focus:border-blue-500"
@@ -321,9 +321,9 @@ export default function Home() {
                       >
                         <option value="BCP">BCP</option>
                         <option value="Yape">Yape</option>
-                        <option value="Visa">Visa / Mastercard</option>
+                        <option value="Visa">{t("visa_mastercard")}</option>
                         <option value="PayPal">PayPal</option>
-                        <option value="Transferencia">Transferencia Bancaria</option>
+                        <option value="Transferencia">{t("bank_transfer")}</option>
                       </select>
                     </div>
                   </div>
@@ -387,7 +387,7 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
     if (!userId) return;
 
     if (!applyReason) {
-      toast.error("Debes poner un motivo para postular");
+      toast.error(t("error_apply_reason"));
       return;
     }
 
@@ -398,12 +398,12 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
         developerId: userId,
         reason: applyReason,
       });
-      toast.success("¡Postulación enviada!");
+      toast.success(t("apply_success"));
       setShowApplyModal(false);
       setApplyReason("");
       onUpdate();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error al postular");
+      toast.error(error.response?.data?.error || t("apply_error"));
     } finally {
       setIsApplying(false);
     }
@@ -486,7 +486,7 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
                 <p className="font-bold text-sm">{type === 'UNITARY' ? t("unitary") : t("group")}</p>
               </div>
               <div>
-                <p className="text-[10px] text-zinc-500 uppercase font-bold">Postulados</p>
+                <p className="text-[10px] text-zinc-500 uppercase font-bold">{t("applicants_count_label")}</p>
                 <p className="font-bold text-sm">{applications}</p>
               </div>
             </div>
@@ -540,7 +540,7 @@ function ProjectPost({ id, author, handle, content, budget, duration, type, cate
               <textarea 
                 value={applyReason}
                 onChange={(e) => setApplyReason(e.target.value)}
-                placeholder="Hola, me interesa porque..."
+                placeholder={t("apply_modal_placeholder")}
                 className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-sm outline-none focus:border-blue-500 h-32 resize-none"
               />
             </div>

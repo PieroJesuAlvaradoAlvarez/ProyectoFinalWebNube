@@ -19,7 +19,8 @@
     "k6:stress-1k": "k6 run k6/stress-1k.js",
     "k6:stress-5k": "k6 run k6/stress-5k.js",
     "k6:extreme-10k": "k6 run k6/extreme-stress-10k.js",
-    "k6:extreme-50k-cloud": "k6 cloud k6/extreme-stress-50k-cloud.js"
+    "k6:extreme-50k-cloud": "k6 cloud k6/extreme-stress-50k-cloud.js",
+    "k6:ultra-extreme-100k-cloud": "k6 cloud k6/extreme-stress-100k-cloud.js"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
